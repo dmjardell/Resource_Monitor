@@ -2150,55 +2150,31 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     // Helper function to convert values to the desired unit
-    _convertValuesToUnit(values, unitMeasure, isBits = false) {
-      const factor = 1024;
-      let unit = isBits ? "b" : "B"; // Default to bits or bytes
+	_convertValuesToUnit(values, unitMeasure, isBits = false) {
+  const factor = 1024;
+  let unit = isBits ? "b" : "B"; // Default unit
 
-      const unitSuffixes = isBits
-        ? { b: "b", k: "k", m: "m", g: "g", t: "t" }
-        : { b: "B", k: "K", m: "M", g: "G", t: "T" };
+  const unitSuffixes = isBits
+    ? { b: "b", k: "k", m: "m", g: "g", t: "t" }
+    : { b: "B", k: "K", m: "M", g: "G", t: "T" };
 
-      // Explicit conversions for 'b', 'k', 'm', 'g', 't'
-      switch (unitMeasure) {
-        case "b":
-          unit = unitSuffixes.b;
-          break;
-        case "k":
-          unit = unitSuffixes.k;
-          values = values.map((v) => v / factor);
-          break;
-        case "m":
-          unit = unitSuffixes.m;
-          values = values.map((v) => v / factor ** 2);
-          break;
-        case "g":
-          unit = unitSuffixes.g;
-          values = values.map((v) => v / factor ** 3);
-          break;
-        case "t":
-          unit = unitSuffixes.t;
-          values = values.map((v) => v / factor ** 4);
-          break;
-        case "auto":
-        default:
-          // Automatically determine the appropriate unit based on the values
-          for (const [suffix, exponent] of [
-            [unitSuffixes.k, 1],
-            [unitSuffixes.m, 2],
-            [unitSuffixes.g, 3],
-            [unitSuffixes.t, 4],
-          ]) {
-            if (values.some((v) => v > factor)) {
-              unit = suffix;
-              values = values.map((v) => v / factor ** exponent);
-            } else break;
-          }
-          break;
-      }
-
-      return { values, unit };
+  if (["b", "k", "m", "g", "t"].includes(unitMeasure)) {
+    unit = unitSuffixes[unitMeasure];
+    values = values.map((v) => v / factor ** Object.keys(unitSuffixes).indexOf(unitMeasure));
+  } else {
+    // Auto-selection logic
+    let exponent = 0;
+    for (const suffix of ["k", "m", "g", "t"]) {
+      if (values.some((v) => v >= factor ** (exponent + 1))) {
+        exponent++;
+        unit = unitSuffixes[suffix];
+      } else break;
     }
+    values = values.map((v) => v / factor ** exponent);
+  }
 
+  return { values, unit };
+}
     // Helper function to convert temperature based on the unit setting
     _convertTemperature(temperature) {
       if (this._thermalTemperatureUnit === "f") {
